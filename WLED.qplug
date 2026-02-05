@@ -1,0 +1,634 @@
+PluginInfo = {
+	-- Use a tilde (~) to seperate the name into a folder
+    Name = "WLED Controller",
+	-- Use semantic versioning
+    Version = "1.0.0",
+	-- Use a GUID for the Id (Note: Avoid changing the Id for a plugin once it is set)
+    Id = "wled-websocket-nwerhle",
+	-- The square brackets allow for a multi-line string
+    Description = [[Plugin to control WLED devices, using websocket control.]],
+    Author = "Nick Werhle",
+    ShowDebug = true
+}
+
+------------------------------- Global Variables ------------------------------
+COLORS = { 
+	["OK"] = "#00FF00",
+	[0] = "#00FF00",
+	["COMPROMISED"] = "orange",
+	[1] = "orange",
+	["FAULT"] = "red",
+	[2] = "red",
+	["NOT_PRESENT"] = "gray",
+	[3] = "gray",
+	["MISSING"] = "darkred",
+	[4] = "darkred",
+	["INITIALIZING"] = "blue",
+	[5] = "blue",
+	["GREEN"] = "#00ff00",
+	["RED"] = "#ff0000",
+	["ORANGE"] = "#ffa500",
+	["GRAY"] = "#7c7c7c",
+	["DARK_GREEN"] = "#007C00",
+}
+
+STATUS_VALUES = {
+	["OK"] = 0,
+	["COMPROMISED"] = 1,
+	["FAULT"] = 2,
+	["NOT_PRESENT"] = 3,
+	["MISSING"] = 4,
+	["INITIALIZING"] = 5,
+}
+
+ENABLE_CODE_PIN = true
+
+--------------------------------- Properties ----------------------------------
+function GetProperties()
+    local props = { }
+
+    return props
+end
+
+--Modify visibility based on other properties
+--[[
+    Example: 
+    if props["propertyName"].Value == "DHCP" then
+        props["someStaticIPRelatedProperty"].IsHidden = true
+    else
+        props["someStaticIPRelatedProperty"].IsHidden = false
+]]--
+function RectifyProperties(props)
+    return props
+end
+
+------------------------- Plugin Block Name and Color -------------------------
+function GetPrettyName(props)
+    return PluginInfo["Name"] .. " v" .. PluginInfo["Version"]
+end
+
+PageNames = { "Control", "Setup" }  --List the pages within the plugin
+function GetPages(props)
+	local pages = {}
+	for ix,name in ipairs(PageNames) do
+      table.insert(pages, {name = PageNames[ix]})
+    end
+    return pages
+end
+
+function GetColor(props)
+	return ConvertColor("#0011ffff")
+end
+
+---------------------------------- Controls -----------------------------------
+function GetControls(props)
+    local ctls = { 
+			{
+    			Name = "power_toggle",
+    			ControlType = "Button",
+    			ButtonType = "Toggle",
+    			Count = 1,
+    			PinStyle = "Both",
+    			UserPin = true,
+				IconType="Icon",
+	  			Icon="Power",
+				Padding = 5
+    		},
+			{
+    			Name = "power_on",
+    			ControlType = "Button",
+    			ButtonType = "Momentary",
+    			Count = 1,
+    			PinStyle = "Both",
+    			UserPin = true,
+    		},
+			{
+    			Name = "power_off",
+    			ControlType = "Button",
+    			ButtonType = "Momentary",
+    			Count = 1,
+    			PinStyle = "Both",
+    			UserPin = true,
+    		},
+			{
+    			Name = "ip_address",
+    			ControlType = "Text",
+    			Count = 1,
+    			PinStyle = "Both",
+    			UserPin = true,
+    		},
+			{
+    			Name = "connection_status",
+    			ControlType = "Indicator",
+    			IndicatorType = "Status",
+    			Count = 1,
+    			PinStyle = "Output",
+    			UserPin = true,
+    		},
+			{
+    			Name = "current_color",
+    			ControlType = "Indicator",
+    			IndicatorType = "Text",
+    			Count = 1,
+    			PinStyle = "Output",
+    			UserPin = true,
+    		},
+			{
+    			Name = "version",
+    			ControlType = "Text",
+    			Count = 1,
+    			PinStyle = "Output",
+    			UserPin = true,
+    		},
+			{
+    			Name = "device_name",
+    			ControlType = "Text",
+    			Count = 1,
+    			PinStyle = "Output",
+    			UserPin = true,
+    		},
+			{
+    			Name = "colors",
+    			ControlType = "Button",
+    			ButtonType = "Momentary",
+    			Count = 10,
+    			PinStyle = "Both",
+    			UserPin = true,
+    		},
+	}
+
+    return ctls
+end
+
+------------------------------- Control Layout --------------------------------
+function GetControlLayout(props)
+	-- Uncomment the next line if you are using multiple pages
+	--local currentPage = props["page_index"].Value
+  local layout   = {}
+  local graphics = {}
+  local CurrentPage = PageNames[props["page_index"].Value]
+  local wledlogo = "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"
+  if CurrentPage == "Control" then
+	table.insert(graphics, {
+	  Type="Image",
+	  Image=wledlogo,
+	  Position={16,5},
+	  Size={216,65}
+	})
+	layout["power_toggle"] = {
+		PrettyName = "Power State",
+		Style = "Button",
+		ButtonStyle = "Toggle",
+		Position = {14,80},
+		Size = {45,45},
+		CornerRadius = 15
+	}
+    table.insert(graphics, {
+      Type = "Text",
+	  Text = "Current Color",
+	  Font = "Monseratt",
+	  FontStyle = "Light",
+      HTextAlign = "Center",
+      FontSize = 16,
+      Position = {50, 115},
+      Size = {150, 25}
+    })
+	layout["current_color"] = {
+		PrettyName = "Current Color",
+		Style = "Text",
+		Position = {55,145},
+		Size = {140,140},
+		IsReadOnly = true,
+		CornerRadius = 80
+	}
+	layout["colors "..1] = {
+		PrettyName = "Red",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {25,300},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {255, 0, 0},
+	}
+	layout["colors "..2] = {
+		PrettyName = "Orange",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {75,300},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {255, 165, 0},
+	}
+	layout["colors "..3] = {
+		PrettyName = "Yellow",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {125,300},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {255, 255, 0},
+	}
+	layout["colors "..4] = {
+		PrettyName = "Green",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {175,300},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {0, 255, 0},
+	}
+	layout["colors "..5] = {
+		PrettyName = "Aqua",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {25,350},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {0, 255, 255},
+	}
+	layout["colors "..6] = {
+		PrettyName = "Light Blue",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {75,350},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {0, 128, 255},
+	}
+	layout["colors "..7] = {
+		PrettyName = "Blue",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {125,350},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {0, 0, 255},
+	}
+	layout["colors "..8] = {
+		PrettyName = "Purple",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {175,350},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {128, 0, 128},
+	}
+	layout["colors "..9] = {
+		PrettyName = "Pink",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {75,400},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {255, 20, 147},
+	}
+	layout["colors "..10] = {
+		PrettyName = "White",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {125,400},
+		Size = {45,45},
+		CornerRadius = 90,
+		Color = {255, 255, 255},
+	}
+	elseif CurrentPage == "Setup" then
+	table.insert(graphics, {
+	  Type="Image",
+	  Image=wledlogo,
+	  Position={52,5},
+	  Size={216,65}
+	})
+    table.insert(graphics, {
+      Type = "Header",
+      Text = "Connection",
+      HTextAlign = "Center",
+      FontSize = 16,
+      Position = {10, 60},
+      Size = {300, 50}
+    })
+    table.insert(graphics, {
+      Type = "Text",
+	  Text = "IP Address",
+	  Font = "Monseratt",
+	  FontStyle = "Light",
+      HTextAlign = "Right",
+      FontSize = 16,
+      Position = {30, 114},
+      Size = {100, 25}
+    })
+	layout["ip_address"] = {
+		PrettyName = "IP Address",
+		Style = "Text",
+		Position = {145,114},
+		Size = {130,25},
+		CornerRadius = 2
+	}
+    table.insert(graphics, {
+      Type = "Text",
+	  Text = "Connection Status",
+	  Font = "Monseratt",
+	  FontStyle = "Light",
+      HTextAlign = "Center",
+      FontSize = 16,
+      Position = {75, 152},
+      Size = {150, 25}
+    })
+	layout["connection_status"] = {
+		PrettyName = "Status",
+		Style = "Text",
+		Position = {30,185},
+		Size = {250,40},
+		IsReadOnly = true,
+		CornerRadius = 2
+	}
+    table.insert(graphics, {
+      Type = "Header",
+      Text = "Device Info",
+      HTextAlign = "Center",
+      FontSize = 16,
+      Position = {10, 228},
+      Size = {300, 50}
+    })
+    table.insert(graphics, {
+      Type = "Text",
+	  Text = "Name",
+	  Font = "Monseratt",
+	  FontStyle = "Light",
+      HTextAlign = "Right",
+      FontSize = 16,
+      Position = {30, 280},
+      Size = {100, 25}
+    })
+	layout["device_name"] = {
+		PrettyName = "Device Name",
+		Style = "Text",
+		Position = {145,280},
+		Size = {130,25},
+		IsReadOnly = true,
+		CornerRadius = 2
+	}
+    table.insert(graphics, {
+      Type = "Text",
+	  Text = "Version",
+	  Font = "Monseratt",
+	  FontStyle = "Light",
+      HTextAlign = "Right",
+      FontSize = 16,
+      Position = {30, 320},
+      Size = {100, 25}
+    })
+	layout["version"] = {
+		PrettyName = "Version",
+		Style = "Text",
+		Position = {145,320},
+		Size = {130,25},
+		IsReadOnly = true,
+		CornerRadius = 2
+	}
+	layout["power_on"] = {
+	PrettyName = "Power ON",
+	Style = "Button",
+	ButtonStyle = "Momentary",
+	Position = {0, 0},
+	Size = {1, 1},
+	IsHidden = true
+	}
+
+	layout["power_off"] = {
+	PrettyName = "Power OFF",
+	Style = "Button",
+	ButtonStyle = "Momentary",
+	Position = {0, 0},
+	Size = {1, 1},
+	IsHidden = true
+	}
+  	end
+  return layout, graphics
+end
+
+
+---------------------------- Other Plugin Functions ---------------------------
+
+function GetPins(props)
+	local pins = { }
+  
+	return pins
+end
+--[[ Uncomment if you need multiple pages (tabs)
+--Current page number can be retrieved in other functions as props["page_index"].Value
+function GetPages(props)
+    local pages = {}
+
+    return pages
+end
+]]
+function GetComponents(props)
+	local components = { }
+
+	return components
+end
+
+function GetWiring(props)
+	local wiring = { }
+  
+	return wiring
+end
+
+------------------------------ Local Functions --------------------------------
+
+
+function HEXtoDEC(hex)
+	hex = string.upper(hex)
+	local b1 = string.byte(string.sub(hex, 1, 1))
+	local b2 = string.byte(string.sub(hex, 2, 2))
+  
+	return( (b1<=57 and b1-48 or b1-55)*16 + (b2<=57 and b2-48 or b2-55) )
+end
+
+function ConvertColor(c)
+	local t = {}
+	t[1] = HEXtoDEC(string.sub(c,2,3))
+	t[2] = HEXtoDEC(string.sub(c,4,5))
+	t[3] = HEXtoDEC(string.sub(c,6,7))
+	return t
+end
+
+
+
+
+--NICK CHECK THIS ---------------------------------------------------------------------------------------->>>>>>>>>>>>>>>>>
+
+if Controls then
+
+
+ws = WebSocket.New() 
+local rapidjson = require("rapidjson")
+protocol = "ws"
+WShost = Controls.ip_address.String
+url = "/ws"
+port = 80
+
+-- Timer Variables (Keep websocket alive)
+pingTimer = Timer.New()
+
+
+
+--Functions
+
+-- === Debug Log Function ===
+local function log(msg)
+  print("[WebSocket] " .. tostring(msg))
+end
+
+-- Websocket Connection
+function connectWebSocket()
+  log("Connecting to WebSocket: " .. WShost)
+  ws:Connect(protocol, WShost, url, port, sub_protocol, headers)
+end
+
+-- === WebSocket Events ===
+ws.Connected = function(ws)
+  log("Connected to " .. WShost)
+  Controls.connection_status.Value = 0
+  pingTimer:Start(10)
+  ws:Write("Hey!")
+end
+
+ws.Closed = function(ws)
+  log("WebSocket closed.")
+  Controls.connection_status.Value = 2
+end
+
+ws.Error = function(ws, err)
+  log("WebSocket error: " .. tostring(err))
+  Controls.connection_status.Value = 2
+end
+
+ws.Data = function( ws, data)
+  --print("Data", data)
+  local tbl = rapidjson.decode(data)
+  -- Set Device Version
+  if Controls.version.String ~= tostring(tbl.info.ver) then
+    Controls.version.String = tostring(tbl.info.ver)
+  end
+  -- Set Device Name
+  if Controls.device_name.String ~= tostring(tbl.info.name) then
+    Controls.device_name.String = tostring(tbl.info.name)
+  end
+  -- Set Power On Status
+  if tbl.state.on == true then
+    Controls.power_toggle.Boolean = true
+  else
+    Controls.power_toggle.Boolean = false
+  end
+  -- Set Device Current Color
+  local col = tbl.state.seg[1].col[1]
+  local r = col[1]
+  local g = col[2]
+  local b = col[3]
+  local hex = string.format("#%02X%02X%02X", r, g, b)
+  Controls.current_color.Color = hex
+end
+
+-- Timer Event Handler (Keepalive for Websocket)
+pingTimer.EventHandler = function()
+  ws:Ping()
+end
+
+-- IP Address Change Event Handler
+Controls.ip_address.EventHandler = function()
+  WShost = Controls.ip_address.String
+  log("IP Address changed to: " .. WShost)
+
+  if Controls.connection_status.Value == 0 then
+    ws:Close()
+    log("Connection Closed!")
+  end
+  
+  Timer.CallAfter(connectWebSocket, 0.25)
+end
+
+--Button Event Handlers
+
+Controls.colors[1].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[255,0,0]]}]}')
+end
+
+Controls.colors[2].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[255,128,0]]}]}')
+end
+
+Controls.colors[3].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[255,255,0]]}]}')
+end
+
+Controls.colors[4].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[0,255,0]]}]}')
+end
+
+Controls.colors[5].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[0,255,255]]}]}')
+end
+
+Controls.colors[6].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[128,200,255]]}]}')
+end
+
+Controls.colors[7].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[0,0,255]]}]}')
+end
+
+Controls.colors[8].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[128,0,255]]}]}')
+end
+
+Controls.colors[9].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[255,0,128]]}]}')
+end
+
+Controls.colors[10].EventHandler = function()
+  ws:Write('{"seg":[{"col":[[255,255,255]]}]}')
+end
+
+-- Power Button
+Controls.power_toggle.EventHandler = function()
+  ws:Write('{"on":"t"}')
+end
+
+-- Power On/Off Pins
+Controls.power_on.EventHandler = function()
+  ws:Write('{"on":"true"}')
+end
+Controls.power_off.EventHandler = function()
+  ws:Write('{"on":"false"}')
+end
+
+------------------------------- Runtime Logic ---------------------------------
+
+-- Set Status to Error
+Controls.connection_status.Value = 4
+-- === Connect on Script Start ===
+connectWebSocket()
+
+------------------------------------ Objects ----------------------------------
+
+
+-------------------------------- Initialization -------------------------------
+function Initialize()
+	-- Do initialization stuff here
+end
+
+local canInitialize = true
+
+
+-- Check Properties and other stuff for illegal values
+
+if canInitialize then
+	print("Initializing")
+	Initialize()
+	print("Initialization Complete")
+else
+	print("Not initializing")
+end
+
+end
