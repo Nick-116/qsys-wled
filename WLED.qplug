@@ -1,6 +1,6 @@
 PluginInfo = {
 	-- Use a tilde (~) to seperate the name into a folder
-    Name = "WLED Controller",
+    Name = "NW Plugins~WLED Controller",
 	-- Use semantic versioning
     Version = "1.0.0",
 	-- Use a GUID for the Id (Note: Avoid changing the Id for a plugin once it is set)
@@ -155,6 +155,14 @@ function GetControls(props)
     			PinStyle = "Both",
     			UserPin = true,
     		},
+			{
+    			Name = "brightness",
+    			ControlType = "Button",
+    			ButtonType = "Momentary",
+    			Count = 5,
+    			PinStyle = "Both",
+    			UserPin = true,
+    		},
 	}
 
     return ctls
@@ -179,24 +187,24 @@ function GetControlLayout(props)
 		PrettyName = "Power State",
 		Style = "Button",
 		ButtonStyle = "Toggle",
-		Position = {14,80},
+		Position = {14,90},
 		Size = {45,45},
 		CornerRadius = 15
 	}
     table.insert(graphics, {
       Type = "Text",
-	  Text = "Current Color",
+      Text = "Current Color",
 	  Font = "Monseratt",
 	  FontStyle = "Light",
       HTextAlign = "Center",
       FontSize = 16,
-      Position = {50, 115},
+      Position = {50, 128},
       Size = {150, 25}
     })
 	layout["current_color"] = {
 		PrettyName = "Current Color",
 		Style = "Text",
-		Position = {55,145},
+		Position = {55,160},
 		Size = {140,140},
 		IsReadOnly = true,
 		CornerRadius = 80
@@ -205,7 +213,7 @@ function GetControlLayout(props)
 		PrettyName = "Red",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {25,300},
+		Position = {25,320},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {255, 0, 0},
@@ -214,7 +222,7 @@ function GetControlLayout(props)
 		PrettyName = "Orange",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {75,300},
+		Position = {75,320},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {255, 165, 0},
@@ -223,7 +231,7 @@ function GetControlLayout(props)
 		PrettyName = "Yellow",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {125,300},
+		Position = {125,320},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {255, 255, 0},
@@ -232,7 +240,7 @@ function GetControlLayout(props)
 		PrettyName = "Green",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {175,300},
+		Position = {175,320},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {0, 255, 0},
@@ -241,7 +249,7 @@ function GetControlLayout(props)
 		PrettyName = "Aqua",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {25,350},
+		Position = {25,380},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {0, 255, 255},
@@ -250,7 +258,7 @@ function GetControlLayout(props)
 		PrettyName = "Light Blue",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {75,350},
+		Position = {75,380},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {0, 128, 255},
@@ -259,7 +267,7 @@ function GetControlLayout(props)
 		PrettyName = "Blue",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {125,350},
+		Position = {125,380},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {0, 0, 255},
@@ -268,7 +276,7 @@ function GetControlLayout(props)
 		PrettyName = "Purple",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {175,350},
+		Position = {175,380},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {128, 0, 128},
@@ -277,7 +285,7 @@ function GetControlLayout(props)
 		PrettyName = "Pink",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {75,400},
+		Position = {75,440},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {255, 20, 147},
@@ -286,10 +294,60 @@ function GetControlLayout(props)
 		PrettyName = "White",
 		Style = "Button",
 		ButtonStyle = "Momentary",
-		Position = {125,400},
+		Position = {125,440},
 		Size = {45,45},
 		CornerRadius = 90,
 		Color = {255, 255, 255},
+	}
+	table.insert(graphics, {
+	  Type = "Text",
+	  Text = "Brightness",
+	  Font = "Monseratt",
+	  FontStyle = "Light",
+	  HTextAlign = "Center",
+	  FontSize = 14,
+	  Position = {25, 485},
+	  Size = {205, 22}
+	})
+	layout["brightness "..1] = {
+		PrettyName = "20%",
+		Legend = "20%",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {25,510},
+		Size = {36,30},
+	}
+	layout["brightness "..2] = {
+		PrettyName = "40%",
+		Legend = "40%",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {66,510},
+		Size = {36,30},
+	}
+	layout["brightness "..3] = {
+		PrettyName = "60%",
+		Legend = "60%",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {107,510},
+		Size = {36,30},
+	}
+	layout["brightness "..4] = {
+		PrettyName = "80%",
+		Legend = "80%",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {148,510},
+		Size = {36,30},
+	}
+	layout["brightness "..5] = {
+		PrettyName = "100%",
+		Legend = "100%",
+		Style = "Button",
+		ButtonStyle = "Momentary",
+		Position = {189,510},
+		Size = {41,30},
 	}
 	elseif CurrentPage == "Setup" then
 	table.insert(graphics, {
@@ -583,11 +641,31 @@ Controls.colors[8].EventHandler = function()
 end
 
 Controls.colors[9].EventHandler = function()
-  ws:Write('{"seg":[{"col":[[255,0,128]]}]}')
+  ws:Write('{"seg":[{"col":[[255,0,255]]}]}')
 end
 
 Controls.colors[10].EventHandler = function()
   ws:Write('{"seg":[{"col":[[255,255,255]]}]}')
+end
+
+Controls.brightness[1].EventHandler = function()
+  ws:Write('{"bri":51}')
+end
+
+Controls.brightness[2].EventHandler = function()
+  ws:Write('{"bri":102}')
+end
+
+Controls.brightness[3].EventHandler = function()
+  ws:Write('{"bri":153}')
+end
+
+Controls.brightness[4].EventHandler = function()
+  ws:Write('{"bri":204}')
+end
+
+Controls.brightness[5].EventHandler = function()
+  ws:Write('{"bri":255}')
 end
 
 -- Power Button
@@ -597,10 +675,14 @@ end
 
 -- Power On/Off Pins
 Controls.power_on.EventHandler = function()
-  ws:Write('{"on":"true"}')
+  if Controls.power_on.Boolean then
+    ws:Write('{"on":true}')
+  end
 end
 Controls.power_off.EventHandler = function()
-  ws:Write('{"on":"false"}')
+  if Controls.power_off.Boolean then
+    ws:Write('{"on":false}')
+  end
 end
 
 ------------------------------- Runtime Logic ---------------------------------
